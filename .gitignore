@@ -1,0 +1,30 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Variables sensibles
+terraform.tfvars
+*.auto.tfvars
+
+# Node.js
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/

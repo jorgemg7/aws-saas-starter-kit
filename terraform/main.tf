@@ -1,7 +1,9 @@
-resource "aws_s3_bucket" "frontend" {
-  bucket = "aws-saas-starter-kit-567251176387"
+module "backend" {
 
-  tags = {
-    Name = "Frontend Bucket"
-  }
+  source = "./modules/backend"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+
 }

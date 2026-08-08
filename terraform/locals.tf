@@ -1,10 +1,9 @@
 locals {
-  project_name = "aws-saas-starter-kit"
-  environment  = "dev"
+  bucket_name = var.frontend_bucket_name != "" ? var.frontend_bucket_name : "${var.project_name}-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   common_tags = {
-    Project     = local.project_name
-    Environment = local.environment
+    Project     = var.project_name
+    Environment = var.environment
     ManagedBy   = "Terraform"
   }
 }

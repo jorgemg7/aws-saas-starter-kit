@@ -52,33 +52,58 @@ export async function logoutUser() {
 }
 
 export async function getCurrentUserFromApi() {
+  const session = await fetchAuthSession();
 
-  const session =
-    await fetchAuthSession();
-
-  const token =
-    session.tokens?.idToken?.toString();
+  const token = session.tokens?.idToken?.toString();
 
   if (!token) {
     throw new Error("No hay sesión activa");
   }
 
-  const response =
-    await fetch(
-      `${API.BASE_URL}/me`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+  const response = await fetch(
+    `${API.BASE_URL}/me`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   if (!response.ok) {
+    const errorText = await response.text();
 
-    const errorText =
-      await response.text();
+    throw new Error(
+      `Backend error ${response.status}: ${errorText}`
+    );
+  }
+
+  return await response.json();
+}
+
+export async function getOrganizationFromApi() {
+  const session = await fetchAuthSession();
+
+  const token = session.tokens?.idToken?.toString();
+
+  if (!token) {
+    throw new Error("No hay sesión activa");
+  }
+
+  const response = await fetch(
+    `${API.BASE_URL}/organization`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
 
     throw new Error(
       `Backend error ${response.status}: ${errorText}`

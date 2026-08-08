@@ -20,7 +20,6 @@ resource "aws_apigatewayv2_api" "backend" {
       "Authorization",
       "Content-Type"
     ]
-
   }
 
   tags = local.common_tags
@@ -46,7 +45,6 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
     ]
 
     issuer = "https://${aws_cognito_user_pool.main.endpoint}"
-
   }
 }
 
@@ -60,7 +58,6 @@ resource "aws_apigatewayv2_integration" "backend" {
   integration_uri = aws_lambda_function.backend.invoke_arn
 
   payload_format_version = "2.0"
-
 }
 
 
@@ -75,7 +72,20 @@ resource "aws_apigatewayv2_route" "me" {
   authorizer_id = aws_apigatewayv2_authorizer.cognito.id
 
   authorization_type = "JWT"
+}
 
+
+resource "aws_apigatewayv2_route" "organization" {
+
+  api_id = aws_apigatewayv2_api.backend.id
+
+  route_key = "GET /organization"
+
+  target = "integrations/${aws_apigatewayv2_integration.backend.id}"
+
+  authorizer_id = aws_apigatewayv2_authorizer.cognito.id
+
+  authorization_type = "JWT"
 }
 
 
@@ -86,7 +96,6 @@ resource "aws_apigatewayv2_stage" "default" {
   name = "$default"
 
   auto_deploy = true
-
 }
 
 
@@ -101,5 +110,4 @@ resource "aws_lambda_permission" "api_gateway" {
   principal = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.backend.execution_arn}/*/*"
-
 }

@@ -1,6 +1,6 @@
 resource "aws_dynamodb_table" "organizations" {
 
-  name         = "${var.project_name}-${var.environment}-organizations"
+  name = "${var.project_name}-${var.environment}-organizations"
 
   billing_mode = "PAY_PER_REQUEST"
 

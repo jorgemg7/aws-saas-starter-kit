@@ -3,17 +3,17 @@ import { HTTP } from "../constants/http.js";
 import { HEADERS } from "../constants/headers.js";
 import { MESSAGES } from "../constants/messages.js";
 
-import { getOrganization } from "../services/organization.service.js";
+import {
+  getOrganizationForUser,
+} from "../services/organization.service.js";
 
 export async function organizationRoute(
-  organizationId: string
+  userId: string
 ) {
-
   const organization =
-    await getOrganization(organizationId);
+    await getOrganizationForUser(userId);
 
   if (!organization) {
-
     return {
       statusCode: HTTP.NOT_FOUND,
       headers: HEADERS.JSON,
@@ -21,12 +21,10 @@ export async function organizationRoute(
         message: "Organization not found",
       }),
     };
-
   }
 
   return ok({
     message: MESSAGES.BACKEND_OK,
     organization,
   });
-
 }

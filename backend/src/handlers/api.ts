@@ -1,6 +1,9 @@
 import { unauthorized } from "../http/unauthorized.js";
 import { meRoute } from "../routes/me.route.js";
 import { organizationRoute } from "../routes/organization.route.js";
+
+import { getOrCreateUser } from "../services/user.service.js";
+
 import type { ApiEvent } from "../types/api.js";
 
 export async function handler(event: ApiEvent) {
@@ -18,14 +21,10 @@ export async function handler(event: ApiEvent) {
     return unauthorized();
   }
 
-  const path = event.rawPath;
+  if (event.rawPath === "/organization") {
+    const user = await getOrCreateUser(id, email);
 
-  if (path === "/organization") {
-    const user = await meRoute(id, email);
-
-    return await organizationRoute(user.body
-      ? JSON.parse(user.body).user.organizationId
-      : "");
+    return await organizationRoute(user.organizationId);
   }
 
   return await meRoute(id, email);

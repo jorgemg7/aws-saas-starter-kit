@@ -2,22 +2,45 @@ import {
   getOrganizationById,
 } from "../repositories/organization.repository.js";
 
-import {
-  getUserById,
-} from "../repositories/user.repository.js";
+import type { Organization } from "../types/organization.js";
+import type { User } from "../types/user.js";
 
-import { Organization } from "../types/organization.js";
+import {
+  hasPermission,
+} from "../auth/authorize.js";
+
+import {
+  PERMISSIONS,
+} from "../auth/permissions.js";
 
 export async function getOrganizationForUser(
-  userId: string
+  user: User,
 ): Promise<Organization | null> {
-  const user = await getUserById(userId);
 
-  if (!user) {
+  if (
+    !hasPermission(
+      user,
+      PERMISSIONS.ORGANIZATION_READ,
+    )
+  ) {
     return null;
   }
 
-  return await getOrganizationById(
+  const organization =
+    await getOrganizationById(
+      user.organizationId,
+    );
+
+  if (!organization) {
+    return null;
+  }
+
+  if (
+    organization.id !==
     user.organizationId
-  );
+  ) {
+    return null;
+  }
+
+  return organization;
 }

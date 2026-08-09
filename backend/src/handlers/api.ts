@@ -2,11 +2,10 @@ import { unauthorized } from "../http/unauthorized.js";
 import { meRoute } from "../routes/me.route.js";
 import { organizationRoute } from "../routes/organization.route.js";
 
-import { getOrCreateUser } from "../services/user.service.js";
-
 import type { ApiEvent } from "../types/api.js";
 
 export async function handler(event: ApiEvent) {
+
   console.log(JSON.stringify(event));
 
   const claims =
@@ -21,11 +20,18 @@ export async function handler(event: ApiEvent) {
     return unauthorized();
   }
 
-  if (event.rawPath === "/organization") {
-    const user = await getOrCreateUser(id, email);
+  const user = await meRoute(id, email);
 
-    return await organizationRoute(user.organizationId);
+  if (event.rawPath === "/organization") {
+
+    if (user.statusCode !== 200 || !user.body) {
+      return user;
+    }
+
+    const userData = JSON.parse(user.body).user;
+
+    return await organizationRoute(userData);
   }
 
-  return await meRoute(id, email);
+  return user;
 }

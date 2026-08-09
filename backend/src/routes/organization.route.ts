@@ -7,11 +7,14 @@ import {
   getOrganizationForUser,
 } from "../services/organization.service.js";
 
+import type { User } from "../types/user.js";
+
 export async function organizationRoute(
-  userId: string
+  user: User,
 ) {
+
   const organization =
-    await getOrganizationForUser(userId);
+    await getOrganizationForUser(user);
 
   if (!organization) {
     return {

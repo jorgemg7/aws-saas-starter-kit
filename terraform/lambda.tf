@@ -38,6 +38,8 @@ resource "aws_lambda_function" "backend" {
 
       ORGANIZATIONS_TABLE = aws_dynamodb_table.organizations.name
 
+      INVITATIONS_TABLE = aws_dynamodb_table.invitations.name
+
     }
   }
 

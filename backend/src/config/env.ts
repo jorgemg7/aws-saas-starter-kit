@@ -5,6 +5,9 @@ export const env = {
   usersTable:
     process.env.USERS_TABLE ?? "",
 
+  invitationsTable:
+    process.env.INVITATIONS_TABLE ?? "",
+
   awsRegion:
     process.env.AWS_REGION ?? "eu-west-1",
 };

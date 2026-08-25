@@ -1,0 +1,5 @@
+project_name         = "aws-saas-starter-kit"
+environment          = "dev"
+aws_region           = "eu-west-1"
+frontend_bucket_name = ""
+enable_versioning    = true

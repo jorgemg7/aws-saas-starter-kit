@@ -13,6 +13,7 @@ resource "aws_apigatewayv2_api" "backend" {
     allow_methods = [
       "GET",
       "POST",
+      "PUT",
       "OPTIONS"
     ]
 
@@ -88,6 +89,65 @@ resource "aws_apigatewayv2_route" "organization" {
   authorization_type = "JWT"
 }
 
+resource "aws_apigatewayv2_route" "members" {
+  api_id = aws_apigatewayv2_api.backend.id
+
+  route_key = "GET /members"
+
+  target = "integrations/${aws_apigatewayv2_integration.backend.id}"
+
+  authorizer_id = aws_apigatewayv2_authorizer.cognito.id
+
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "members_post" {
+  api_id = aws_apigatewayv2_api.backend.id
+
+  route_key = "POST /members"
+
+  target = "integrations/${aws_apigatewayv2_integration.backend.id}"
+
+  authorizer_id = aws_apigatewayv2_authorizer.cognito.id
+
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "invitations_accept" {
+  api_id = aws_apigatewayv2_api.backend.id
+
+  route_key = "POST /invitations/accept"
+
+  target = "integrations/${aws_apigatewayv2_integration.backend.id}"
+
+  authorizer_id = aws_apigatewayv2_authorizer.cognito.id
+
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "invitations" {
+  api_id = aws_apigatewayv2_api.backend.id
+
+  route_key = "GET /invitations"
+
+  target = "integrations/${aws_apigatewayv2_integration.backend.id}"
+
+  authorizer_id = aws_apigatewayv2_authorizer.cognito.id
+
+  authorization_type = "JWT"
+}
+
+resource "aws_apigatewayv2_route" "members_role" {
+  api_id = aws_apigatewayv2_api.backend.id
+
+  route_key = "PUT /members/{id}/role"
+
+  target = "integrations/${aws_apigatewayv2_integration.backend.id}"
+
+  authorizer_id = aws_apigatewayv2_authorizer.cognito.id
+
+  authorization_type = "JWT"
+}
 
 resource "aws_apigatewayv2_stage" "default" {
 

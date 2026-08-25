@@ -1,8 +1,11 @@
 export const PERMISSIONS = {
   ORGANIZATION_READ: "organization:read",
   ORGANIZATION_UPDATE: "organization:update",
+
   MEMBERS_READ: "members:read",
   MEMBERS_MANAGE: "members:manage",
+  MEMBERS_ROLE_UPDATE: "members:role:update",
+
   ORGANIZATION_DELETE: "organization:delete",
 } as const;
 
@@ -15,6 +18,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.ORGANIZATION_UPDATE,
     PERMISSIONS.MEMBERS_READ,
     PERMISSIONS.MEMBERS_MANAGE,
+    PERMISSIONS.MEMBERS_ROLE_UPDATE,
     PERMISSIONS.ORGANIZATION_DELETE,
   ],
 

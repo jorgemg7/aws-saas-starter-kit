@@ -27,7 +27,6 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 }
 
 resource "aws_iam_role_policy" "backend_dynamodb" {
-
   name = "${var.project_name}-${var.environment}-backend-dynamodb"
 
   role = aws_iam_role.backend_lambda.id
@@ -50,7 +49,14 @@ resource "aws_iam_role_policy" "backend_dynamodb" {
 
         Resource = [
           aws_dynamodb_table.users.arn,
-          aws_dynamodb_table.organizations.arn
+          "${aws_dynamodb_table.users.arn}/index/*",
+
+          aws_dynamodb_table.organizations.arn,
+          "${aws_dynamodb_table.organizations.arn}/index/*",
+
+          aws_dynamodb_table.invitations.arn,
+          "${aws_dynamodb_table.invitations.arn}/index/*"
+
         ]
       }
     ]

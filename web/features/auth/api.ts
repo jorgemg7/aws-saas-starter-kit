@@ -51,14 +51,25 @@ export async function logoutUser() {
   await signOut();
 }
 
-export async function getCurrentUserFromApi() {
-  const session = await fetchAuthSession();
+async function getAuthToken() {
+  const session =
+    await fetchAuthSession();
 
-  const token = session.tokens?.idToken?.toString();
+  const token =
+    session.tokens?.idToken?.toString();
 
   if (!token) {
-    throw new Error("No hay sesión activa");
+    throw new Error(
+      "No hay sesión activa"
+    );
   }
+
+  return token;
+}
+
+export async function getCurrentUserFromApi() {
+  const token =
+    await getAuthToken();
 
   const response = await fetch(
     `${API.BASE_URL}/me`,
@@ -72,7 +83,8 @@ export async function getCurrentUserFromApi() {
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText =
+      await response.text();
 
     throw new Error(
       `Backend error ${response.status}: ${errorText}`
@@ -83,13 +95,8 @@ export async function getCurrentUserFromApi() {
 }
 
 export async function getOrganizationFromApi() {
-  const session = await fetchAuthSession();
-
-  const token = session.tokens?.idToken?.toString();
-
-  if (!token) {
-    throw new Error("No hay sesión activa");
-  }
+  const token =
+    await getAuthToken();
 
   const response = await fetch(
     `${API.BASE_URL}/organization`,
@@ -103,7 +110,8 @@ export async function getOrganizationFromApi() {
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText =
+      await response.text();
 
     throw new Error(
       `Backend error ${response.status}: ${errorText}`
@@ -111,4 +119,160 @@ export async function getOrganizationFromApi() {
   }
 
   return await response.json();
+}
+
+export async function getMembersFromApi() {
+  const token =
+    await getAuthToken();
+
+  const response = await fetch(
+    `${API.BASE_URL}/members`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ??
+        `Backend error ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+export async function addMemberToApi(
+  email: string
+) {
+  const token =
+    await getAuthToken();
+
+  const response = await fetch(
+    `${API.BASE_URL}/members`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+      }),
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ??
+        `Backend error ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+export async function updateMemberRoleToApi(
+  memberId: string,
+  role: "ADMIN" | "MEMBER"
+) {
+  const token =
+    await getAuthToken();
+
+  const response = await fetch(
+    `${API.BASE_URL}/members/${memberId}/role`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        role,
+      }),
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ??
+        `Backend error ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+export async function getInvitationsFromApi() {
+  const token =
+    await getAuthToken();
+
+  const response = await fetch(
+    `${API.BASE_URL}/invitations`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ??
+        `Backend error ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+export async function acceptInvitationToApi(
+  invitationId: string
+) {
+  const token =
+    await getAuthToken();
+
+  const response = await fetch(
+    `${API.BASE_URL}/invitations/accept`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        invitationId,
+      }),
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ??
+        `Backend error ${response.status}`
+    );
+  }
+
+  return data;
 }

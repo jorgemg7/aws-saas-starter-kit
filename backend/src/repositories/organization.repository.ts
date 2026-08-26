@@ -1,49 +1,39 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-
 import {
-  DynamoDBDocumentClient,
   PutCommand,
   GetCommand,
 } from "@aws-sdk/lib-dynamodb";
 
-import { Organization } from "../types/organization.js";
+import { dynamo } from "../config/aws.js";
+import { env } from "../config/env.js";
 
-const client = new DynamoDBClient({});
-
-const dynamo =
-  DynamoDBDocumentClient.from(client);
-
-const TABLE_NAME =
-  process.env.ORGANIZATIONS_TABLE!;
+import type { Organization } from "../types/organization.js";
 
 export async function getOrganizationById(
-  id: string
+  id: string,
 ): Promise<Organization | null> {
-
-  const result =
-    await dynamo.send(
-      new GetCommand({
-        TableName: TABLE_NAME,
-        Key: {
-          id,
-        },
-      })
-    );
+  const result = await dynamo.send(
+    new GetCommand({
+      TableName: env.organizationsTable,
+      Key: {
+        id,
+      },
+    }),
+  );
 
   return (
-    result.Item as Organization
-  ) ?? null;
+    (result.Item as Organization) ??
+    null
+  );
 }
 
 export async function createOrganization(
-  organization: Organization
+  organization: Organization,
 ): Promise<Organization> {
-
   await dynamo.send(
     new PutCommand({
-      TableName: TABLE_NAME,
+      TableName: env.organizationsTable,
       Item: organization,
-    })
+    }),
   );
 
   return organization;

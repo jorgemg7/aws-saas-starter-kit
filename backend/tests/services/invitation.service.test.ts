@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { Invitation } from "../../src/repositories/invitation.repository.js";
-import type { User } from "../../src/types/user.js";
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const repositoryMocks = vi.hoisted(() => ({
   createInvitation: vi.fn(),
@@ -9,21 +12,39 @@ const repositoryMocks = vi.hoisted(() => ({
   getPendingInvitationsByEmail: vi.fn(),
   getInvitationById: vi.fn(),
   updateInvitationStatus: vi.fn(),
-}));
-
-const userRepositoryMocks = vi.hoisted(() => ({
   getUserByEmail: vi.fn(),
   createUser: vi.fn(),
 }));
 
 vi.mock(
   "../../src/repositories/invitation.repository.js",
-  () => repositoryMocks,
+  () => ({
+    createInvitation:
+      repositoryMocks.createInvitation,
+
+    getPendingInvitationByEmail:
+      repositoryMocks.getPendingInvitationByEmail,
+
+    getPendingInvitationsByEmail:
+      repositoryMocks.getPendingInvitationsByEmail,
+
+    getInvitationById:
+      repositoryMocks.getInvitationById,
+
+    updateInvitationStatus:
+      repositoryMocks.updateInvitationStatus,
+  }),
 );
 
 vi.mock(
   "../../src/repositories/user.repository.js",
-  () => userRepositoryMocks,
+  () => ({
+    getUserByEmail:
+      repositoryMocks.getUserByEmail,
+
+    createUser:
+      repositoryMocks.createUser,
+  }),
 );
 
 import {
@@ -32,48 +53,18 @@ import {
   acceptOrganizationInvitation,
 } from "../../src/services/invitation.service.js";
 
-function createInvitation(
-  overrides: Partial<Invitation> = {},
-): Invitation {
-  return {
-    id: "invitation-1",
-    email: "user@example.com",
-    organizationId: "organization-1",
-    role: "MEMBER",
-    status: "PENDING",
-    createdAt: "2026-01-01T00:00:00.000Z",
-    expiresAt: "2099-01-01T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
-function createUser(
-  overrides: Partial<User> = {},
-): User {
-  return {
-    id: "user-1",
-    email: "user@example.com",
-    organizationId: "organization-1",
-    role: "MEMBER",
-    plan: "free",
-    createdAt: "2026-01-01T00:00:00.000Z",
-    ...overrides,
-  };
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("createOrganizationInvitation", () => {
-  it("normalizes the email before creating the invitation", async () => {
+  it("creates a normalized pending invitation", async () => {
     repositoryMocks.getPendingInvitationByEmail.mockResolvedValue(
       null,
     );
 
     repositoryMocks.createInvitation.mockImplementation(
-      async (invitation: Invitation) =>
-        invitation,
+      async (invitation) => invitation,
     );
 
     const result =
@@ -91,7 +82,7 @@ describe("createOrganizationInvitation", () => {
 
     expect(
       repositoryMocks.createInvitation,
-    ).toHaveBeenCalledOnce();
+    ).toHaveBeenCalledTimes(1);
 
     expect(result.email).toBe(
       "user@example.com",
@@ -103,17 +94,38 @@ describe("createOrganizationInvitation", () => {
 
     expect(result.role).toBe("MEMBER");
     expect(result.status).toBe("PENDING");
+
+    expect(result.id).toEqual(
+      expect.any(String),
+    );
+
+    expect(
+      new Date(result.expiresAt).getTime(),
+    ).toBeGreaterThan(
+      new Date(result.createdAt).getTime(),
+    );
   });
 
-  it("rejects a duplicate pending invitation", async () => {
+  it("rejects when a pending invitation already exists", async () => {
     repositoryMocks.getPendingInvitationByEmail.mockResolvedValue(
-      createInvitation(),
+      {
+        id: "invitation-1",
+        email: "user@example.com",
+        organizationId:
+          "organization-1",
+        role: "MEMBER",
+        status: "PENDING",
+        createdAt:
+          "2026-01-01T00:00:00.000Z",
+        expiresAt:
+          "2026-01-08T00:00:00.000Z",
+      },
     );
 
     await expect(
       createOrganizationInvitation(
         "organization-1",
-        "user@example.com",
+        "USER@example.com",
         "MEMBER",
       ),
     ).rejects.toThrow(
@@ -127,9 +139,20 @@ describe("createOrganizationInvitation", () => {
 });
 
 describe("getOrganizationInvitations", () => {
-  it("normalizes the email before querying invitations", async () => {
+  it("normalizes the email before querying", async () => {
     const invitations = [
-      createInvitation(),
+      {
+        id: "invitation-1",
+        email: "user@example.com",
+        organizationId:
+          "organization-1",
+        role: "MEMBER" as const,
+        status: "PENDING" as const,
+        createdAt:
+          "2026-01-01T00:00:00.000Z",
+        expiresAt:
+          "2026-01-08T00:00:00.000Z",
+      },
     ];
 
     repositoryMocks.getPendingInvitationsByEmail.mockResolvedValue(
@@ -138,7 +161,7 @@ describe("getOrganizationInvitations", () => {
 
     const result =
       await getOrganizationInvitations(
-        "  USER@Example.COM ",
+        " USER@EXAMPLE.COM ",
       );
 
     expect(
@@ -154,14 +177,88 @@ describe("getOrganizationInvitations", () => {
 });
 
 describe("acceptOrganizationInvitation", () => {
-  it("rejects an invitation that does not exist", async () => {
+  const pendingInvitation = {
+    id: "invitation-1",
+    email: "user@example.com",
+    organizationId:
+      "organization-1",
+    role: "MEMBER" as const,
+    status: "PENDING" as const,
+    createdAt:
+      "2026-01-01T00:00:00.000Z",
+    expiresAt:
+      "2099-01-08T00:00:00.000Z",
+  };
+
+  it("accepts a valid invitation and creates the user", async () => {
+    repositoryMocks.getInvitationById.mockResolvedValue(
+      pendingInvitation,
+    );
+
+    repositoryMocks.getUserByEmail.mockResolvedValue(
+      null,
+    );
+
+    repositoryMocks.createUser.mockImplementation(
+      async (user) => user,
+    );
+
+    repositoryMocks.updateInvitationStatus.mockResolvedValue(
+      {
+        ...pendingInvitation,
+        status: "ACCEPTED",
+      },
+    );
+
+    const result =
+      await acceptOrganizationInvitation(
+        "invitation-1",
+        " USER@EXAMPLE.COM ",
+      );
+
+    expect(
+      repositoryMocks.getInvitationById,
+    ).toHaveBeenCalledWith(
+      "invitation-1",
+    );
+
+    expect(
+      repositoryMocks.getUserByEmail,
+    ).toHaveBeenCalledWith(
+      "user@example.com",
+    );
+
+    expect(
+      repositoryMocks.createUser,
+    ).toHaveBeenCalledTimes(1);
+
+    expect(result.email).toBe(
+      "user@example.com",
+    );
+
+    expect(result.organizationId).toBe(
+      "organization-1",
+    );
+
+    expect(result.role).toBe("MEMBER");
+    expect(result.plan).toBe("free");
+
+    expect(
+      repositoryMocks.updateInvitationStatus,
+    ).toHaveBeenCalledWith(
+      "invitation-1",
+      "ACCEPTED",
+    );
+  });
+
+  it("rejects when the invitation does not exist", async () => {
     repositoryMocks.getInvitationById.mockResolvedValue(
       null,
     );
 
     await expect(
       acceptOrganizationInvitation(
-        "missing-invitation",
+        "missing",
         "user@example.com",
       ),
     ).rejects.toThrow(
@@ -169,11 +266,12 @@ describe("acceptOrganizationInvitation", () => {
     );
   });
 
-  it("rejects an invitation that is not pending", async () => {
+  it("rejects when the invitation is not pending", async () => {
     repositoryMocks.getInvitationById.mockResolvedValue(
-      createInvitation({
+      {
+        ...pendingInvitation,
         status: "ACCEPTED",
-      }),
+      },
     );
 
     await expect(
@@ -186,35 +284,39 @@ describe("acceptOrganizationInvitation", () => {
     );
   });
 
-  it("rejects an invitation for a different email", async () => {
+  it("rejects when the email does not match", async () => {
     repositoryMocks.getInvitationById.mockResolvedValue(
-      createInvitation({
-        email: "owner@example.com",
-      }),
+      pendingInvitation,
     );
 
     await expect(
       acceptOrganizationInvitation(
         "invitation-1",
-        "another@example.com",
+        "other@example.com",
       ),
     ).rejects.toThrow(
       "Invitation email does not match",
     );
+
+    expect(
+      repositoryMocks.getUserByEmail,
+    ).not.toHaveBeenCalled();
   });
 
-  it("expires an invitation when its expiration date has passed", async () => {
+  it("expires an expired invitation", async () => {
     repositoryMocks.getInvitationById.mockResolvedValue(
-      createInvitation({
+      {
+        ...pendingInvitation,
         expiresAt:
           "2020-01-01T00:00:00.000Z",
-      }),
+      },
     );
 
     repositoryMocks.updateInvitationStatus.mockResolvedValue(
-      createInvitation({
+      {
+        ...pendingInvitation,
         status: "EXPIRED",
-      }),
+      },
     );
 
     await expect(
@@ -232,15 +334,32 @@ describe("acceptOrganizationInvitation", () => {
       "invitation-1",
       "EXPIRED",
     );
+
+    expect(
+      repositoryMocks.getUserByEmail,
+    ).not.toHaveBeenCalled();
+
+    expect(
+      repositoryMocks.createUser,
+    ).not.toHaveBeenCalled();
   });
 
-  it("rejects acceptance when the user already exists", async () => {
+  it("rejects when the user already exists", async () => {
     repositoryMocks.getInvitationById.mockResolvedValue(
-      createInvitation(),
+      pendingInvitation,
     );
 
-    userRepositoryMocks.getUserByEmail.mockResolvedValue(
-      createUser(),
+    repositoryMocks.getUserByEmail.mockResolvedValue(
+      {
+        id: "existing-user",
+        email: "user@example.com",
+        organizationId:
+          "organization-2",
+        role: "MEMBER" as const,
+        plan: "free",
+        createdAt:
+          "2026-01-01T00:00:00.000Z",
+      },
     );
 
     await expect(
@@ -253,7 +372,7 @@ describe("acceptOrganizationInvitation", () => {
     );
 
     expect(
-      userRepositoryMocks.createUser,
+      repositoryMocks.createUser,
     ).not.toHaveBeenCalled();
 
     expect(
@@ -261,72 +380,41 @@ describe("acceptOrganizationInvitation", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("creates the user and accepts the invitation", async () => {
-    const invitation = createInvitation();
-
+  it("rejects when the invitation cannot be updated", async () => {
     repositoryMocks.getInvitationById.mockResolvedValue(
-      invitation,
+      pendingInvitation,
     );
 
-    userRepositoryMocks.getUserByEmail.mockResolvedValue(
+    repositoryMocks.getUserByEmail.mockResolvedValue(
       null,
     );
 
-    userRepositoryMocks.createUser.mockImplementation(
-      async (user: User) => user,
+    repositoryMocks.createUser.mockImplementation(
+      async (user) => user,
     );
 
     repositoryMocks.updateInvitationStatus.mockResolvedValue(
-      createInvitation({
-        status: "ACCEPTED",
-      }),
+      null,
     );
 
-    const result =
-      await acceptOrganizationInvitation(
+    await expect(
+      acceptOrganizationInvitation(
         "invitation-1",
-        " USER@Example.COM ",
-      );
-
-    expect(
-      userRepositoryMocks.getUserByEmail,
-    ).toHaveBeenCalledWith(
-      "user@example.com",
+        "user@example.com",
+      ),
+    ).rejects.toThrow(
+      "Unable to update invitation",
     );
 
     expect(
-      userRepositoryMocks.createUser,
-    ).toHaveBeenCalledOnce();
-
-    const createdUser =
-      userRepositoryMocks.createUser.mock
-        .calls[0][0] as User;
-
-    expect(createdUser.email).toBe(
-      "user@example.com",
-    );
-
-    expect(
-      createdUser.organizationId,
-    ).toBe("organization-1");
-
-    expect(createdUser.role).toBe(
-      "MEMBER",
-    );
-
-    expect(createdUser.plan).toBe(
-      "free",
-    );
+      repositoryMocks.createUser,
+    ).toHaveBeenCalledTimes(1);
 
     expect(
       repositoryMocks.updateInvitationStatus,
     ).toHaveBeenCalledWith(
       "invitation-1",
       "ACCEPTED",
-    );
-
-    expect(result).toEqual(
-      createdUser,
     );
   });
 });

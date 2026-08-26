@@ -9,5 +9,7 @@ export function hasPermission(
   user: User,
   permission: Permission,
 ): boolean {
-  return ROLE_PERMISSIONS[user.role].includes(permission);
+  return (
+    ROLE_PERMISSIONS[user.role] as readonly Permission[]
+  ).includes(permission);
 }

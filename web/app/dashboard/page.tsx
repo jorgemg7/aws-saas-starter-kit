@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { StatCard } from "@/components/dashboard/stat-card";
 
+import { getErrorMessage } from "@/types/api";
+
 import {
   getCurrentUserFromApi,
   getMembersFromApi,
@@ -22,7 +24,7 @@ interface Member {
 
 export default function DashboardPage() {
   const [user, setUser] =
-    useState<any>(null);
+    useState<{ user: Member } | null>(null);
 
   const [members, setMembers] =
     useState<Member[]>([]);
@@ -63,12 +65,14 @@ export default function DashboardPage() {
       setMembers(
         membersData.members ?? []
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
 
       setError(
-        err?.message ??
-          "Error cargando dashboard"
+        getErrorMessage(
+          err,
+          "Error cargando dashboard",
+        ),
       );
     } finally {
       setLoading(false);
@@ -76,7 +80,52 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+
+    async function initializeDashboard() {
+      try {
+        const [
+          userData,
+          membersData,
+        ] = await Promise.all([
+          getCurrentUserFromApi(),
+          getMembersFromApi(),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setUser(userData);
+
+        setMembers(
+          membersData.members ?? []
+        );
+      } catch (err: unknown) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(err);
+
+        setError(
+          getErrorMessage(
+            err,
+            "Error cargando dashboard",
+          ),
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void initializeDashboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleAddMember(
@@ -105,12 +154,14 @@ export default function DashboardPage() {
       setEmail("");
 
       await loadData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
 
       setMemberError(
-        err?.message ??
-          "Error enviando la invitación"
+        getErrorMessage(
+          err,
+          "Error enviando la invitación",
+        ),
       );
     } finally {
       setAdding(false);
@@ -131,12 +182,14 @@ export default function DashboardPage() {
       );
 
       await loadData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
 
       setMemberError(
-        err?.message ??
-          "Error cambiando el rol"
+        getErrorMessage(
+          err,
+          "Error cambiando el rol",
+        ),
       );
     } finally {
       setUpdatingRole(null);

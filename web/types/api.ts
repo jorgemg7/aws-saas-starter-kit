@@ -1,9 +1,19 @@
-import { APIGatewayProxyEventV2 } from "aws-lambda";
+export interface ApiError {
+  message?: string;
+}
 
-export type ApiEvent = APIGatewayProxyEventV2;
+export function getErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
 
-export interface ApiResponse {
-  statusCode: number;
-  headers?: Record<string, string>;
-  body: string;
+  return fallback;
 }

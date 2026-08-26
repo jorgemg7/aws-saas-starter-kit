@@ -8,6 +8,8 @@ import {
   acceptInvitationToApi,
 } from "@/features/auth/api";
 
+import { getErrorMessage } from "@/types/api";
+
 interface Invitation {
   id: string;
   email: string;
@@ -47,12 +49,14 @@ export default function InvitationsPage() {
       setInvitations(
         data.invitations ?? []
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
 
       setError(
-        err?.message ??
-          "Error cargando invitaciones"
+        getErrorMessage(
+          err,
+          "Error cargando invitaciones",
+        ),
       );
     } finally {
       setLoading(false);
@@ -60,7 +64,45 @@ export default function InvitationsPage() {
   }
 
   useEffect(() => {
-    loadInvitations();
+    let cancelled = false;
+
+    async function initializeInvitations() {
+      try {
+        const data =
+          await getInvitationsFromApi();
+
+        if (cancelled) {
+          return;
+        }
+
+        setInvitations(
+          data.invitations ?? []
+        );
+      } catch (err: unknown) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(err);
+
+        setError(
+          getErrorMessage(
+            err,
+            "Error cargando invitaciones",
+          ),
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void initializeInvitations();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleAccept(
@@ -90,12 +132,14 @@ export default function InvitationsPage() {
       setTimeout(() => {
         router.push("/dashboard");
       }, 800);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
 
       setError(
-        err?.message ??
-          "Error aceptando invitación"
+        getErrorMessage(
+          err,
+          "Error aceptando invitación",
+        ),
       );
     } finally {
       setAccepting(null);

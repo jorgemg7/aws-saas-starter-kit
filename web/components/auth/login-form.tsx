@@ -7,10 +7,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Eye, EyeOff } from "lucide-react";
-
 import { toast } from "sonner";
 
 import { loginUser } from "@/features/auth/api";
+import { getErrorMessage } from "@/types/api";
 
 import {
   loginSchema,
@@ -38,28 +38,28 @@ export function LoginForm() {
     resolver: zodResolver(loginSchema),
   });
 
-  async function onSubmit(
-    data: LoginSchema
-  ) {
+  async function onSubmit(data: LoginSchema) {
     try {
       setLoading(true);
 
       await loginUser(
         data.email,
-        data.password
+        data.password,
       );
 
       toast.success(
-        "Inicio de sesión correcto"
+        "Inicio de sesión correcto",
       );
 
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
 
       toast.error(
-        error.message ??
-          "No se pudo iniciar sesión"
+        getErrorMessage(
+          error,
+          "No se pudo iniciar sesión",
+        ),
       );
     } finally {
       setLoading(false);
@@ -68,7 +68,6 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md p-8">
-
       <h1 className="text-3xl font-bold">
         Iniciar sesión
       </h1>
@@ -81,7 +80,6 @@ export function LoginForm() {
         onSubmit={handleSubmit(onSubmit)}
         className="mt-8 space-y-6"
       >
-
         <div className="space-y-2">
           <Label htmlFor="email">
             Email
@@ -107,7 +105,6 @@ export function LoginForm() {
           </Label>
 
           <div className="relative">
-
             <Input
               id="password"
               type={
@@ -123,18 +120,17 @@ export function LoginForm() {
               type="button"
               onClick={() =>
                 setShowPassword(
-                  !showPassword
+                  !showPassword,
                 )
               }
               className="absolute right-3 top-1/2 -translate-y-1/2"
             >
               {showPassword ? (
-                <Eye className="h-4 w-4" />
+                <EyeOff size={18} />
               ) : (
-                <EyeOff className="h-4 w-4" />
+                <Eye size={18} />
               )}
             </button>
-
           </div>
 
           {errors.password && (
@@ -145,17 +141,15 @@ export function LoginForm() {
         </div>
 
         <Button
-          type="submit"
           className="w-full"
+          type="submit"
           disabled={loading}
         >
           {loading
-            ? "Entrando..."
+            ? "Iniciando sesión..."
             : "Iniciar sesión"}
         </Button>
-
       </form>
-
     </Card>
   );
 }

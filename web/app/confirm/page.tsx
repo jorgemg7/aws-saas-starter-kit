@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { confirmUser } from "@/features/auth/api";
+import { getErrorMessage } from "@/types/api";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,11 +38,11 @@ function ConfirmForm() {
       toast.success("Cuenta confirmada correctamente");
 
       router.push("/login");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
 
       toast.error(
-        error?.message ?? "Código incorrecto"
+        getErrorMessage(error, "Código incorrecto"),
       );
     } finally {
       setLoading(false);

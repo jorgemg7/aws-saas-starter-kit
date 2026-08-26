@@ -9,7 +9,8 @@ import {
   createOrganizationInvitation,
 } from "./invitation.service.js";
 
-import { User } from "../types/user.js";
+import type { Invitation } from "../repositories/invitation.repository.js";
+import type { User } from "../types/user.js";
 
 export async function getOrganizationMembers(
   organizationId: string
@@ -22,15 +23,7 @@ export async function getOrganizationMembers(
 export async function addOrganizationMember(
   organizationId: string,
   email: string
-): Promise<{
-  id: string;
-  email: string;
-  organizationId: string;
-  role: "MEMBER";
-  status: "PENDING";
-  createdAt: string;
-  expiresAt: string;
-}> {
+): Promise<Invitation> {
   const normalizedEmail =
     email.trim().toLowerCase();
 

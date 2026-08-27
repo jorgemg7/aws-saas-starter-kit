@@ -2,9 +2,7 @@ terraform {
   required_version = ">= 1.13.0"
 
   backend "s3" {
-    bucket       = "aws-saas-starter-kit-dev-terraform-state-567251176387"
     key          = "terraform.tfstate"
-    region       = "eu-west-1"
     encrypt      = true
     use_lockfile = true
   }

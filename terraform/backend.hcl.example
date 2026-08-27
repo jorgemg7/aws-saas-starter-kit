@@ -1,0 +1,9 @@
+# Terraform remote state configuration.
+# Create this S3 bucket in your own AWS account before running terraform init.
+
+bucket = "YOUR_TERRAFORM_STATE_BUCKET"
+key    = "terraform.tfstate"
+region = "eu-west-1"
+
+encrypt      = true
+use_lockfile = true

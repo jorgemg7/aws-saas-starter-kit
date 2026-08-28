@@ -9,3 +9,7 @@ variable "environment" {
 variable "aws_region" {
   type = string
 }
+
+variable "installation_id" {
+  type = string
+}

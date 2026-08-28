@@ -6,7 +6,7 @@ resource "aws_s3_bucket" "frontend" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.project_name}-frontend"
+      Name = "${local.resource_prefix}-frontend"
     }
   )
 }

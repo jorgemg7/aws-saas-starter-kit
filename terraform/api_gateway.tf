@@ -1,6 +1,6 @@
 resource "aws_apigatewayv2_api" "backend" {
 
-  name = "${var.project_name}-${var.environment}-api"
+  name = "${local.resource_prefix}-api"
 
   protocol_type = "HTTP"
 

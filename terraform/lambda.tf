@@ -8,7 +8,7 @@ data "archive_file" "backend_lambda" {
 
 resource "aws_lambda_function" "backend" {
 
-  function_name = "${var.project_name}-${var.environment}-backend"
+  function_name = "${local.resource_prefix}-backend"
 
   role = aws_iam_role.backend_lambda.arn
 

@@ -32,3 +32,6 @@ Thumbs.db
 # Backend
 backend/dist/
 backend/*.zip
+
+# Local Terraform backend configuration
+terraform/backend.hcl

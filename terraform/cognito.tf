@@ -1,5 +1,5 @@
 resource "aws_cognito_user_pool" "main" {
-  name = "${var.project_name}-${var.environment}"
+  name = local.resource_prefix
 
   auto_verified_attributes = ["email"]
 
@@ -21,7 +21,7 @@ resource "aws_cognito_user_pool" "main" {
 }
 
 resource "aws_cognito_user_pool_client" "web" {
-  name         = "${var.project_name}-web"
+  name         = "${local.resource_prefix}-web"
   user_pool_id = aws_cognito_user_pool.main.id
 
   generate_secret = false

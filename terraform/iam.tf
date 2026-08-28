@@ -1,5 +1,5 @@
 resource "aws_iam_role" "backend_lambda" {
-  name = "${var.project_name}-${var.environment}-backend-lambda-role"
+  name = "${local.resource_prefix}-backend-lambda-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -27,7 +27,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 }
 
 resource "aws_iam_role_policy" "backend_dynamodb" {
-  name = "${var.project_name}-${var.environment}-backend-dynamodb"
+  name = "${local.resource_prefix}-backend-dynamodb"
 
   role = aws_iam_role.backend_lambda.id
 

@@ -1,72 +1,64 @@
 # AWS SaaS Starter Kit — Installation Guide
 
-This guide explains how to deploy the AWS SaaS Starter Kit from scratch in your own AWS account.
-
-The starter kit provisions the application infrastructure using:
-
-* AWS
-* Terraform
-* Amazon Cognito
-* API Gateway
-* AWS Lambda
-* DynamoDB
-* Amazon S3
-* CloudFront
-* IAM
-* CloudWatch
-* GitHub Actions
-* Next.js
+This guide explains how to deploy the AWS SaaS Starter Kit as an independent installation.
 
 The infrastructure is designed for **independent installations**.
 
-Each Terraform installation automatically generates a unique installation ID. This ID is included in the names of the application's AWS resources, allowing the same starter kit to be deployed multiple times without manually renaming the application resources.
+Each Terraform installation automatically generates a unique installation ID when one is not explicitly provided. This ID is included in the names of the application's AWS resources, allowing the same starter kit to be deployed multiple times without manually renaming application resources.
+
+Each independent installation must also use its **own Terraform state**.
 
 ---
 
 ## 1. Requirements
 
-Before starting, install:
+Before installing the starter kit, make sure the following tools are installed:
 
-* Git
-* Node.js 24+
-* npm
 * AWS CLI
-* Terraform 1.13+
-* An AWS account
+* Terraform >= 1.13
+* Node.js 24 or compatible version
+* npm
+* Git
 
-Verify the tools:
+Verify the installations:
 
 ```bash
-git --version
-node --version
-npm --version
 aws --version
 terraform version
+node --version
+npm --version
+git --version
 ```
+
+You also need an AWS account with permissions to create the infrastructure defined by the Terraform configuration.
 
 ---
 
-## 2. Configure AWS CLI
+## 2. Configure AWS credentials
 
-Configure credentials for the AWS account that will host the application:
+Configure the AWS CLI:
 
 ```bash
 aws configure
 ```
 
-Verify access:
+Verify the active AWS identity:
 
 ```bash
 aws sts get-caller-identity
 ```
 
-The command should return the AWS account and IAM identity being used.
+Make sure the AWS account and credentials belong to the installation you intend to deploy.
 
-Make sure the AWS identity has enough permissions to create the resources defined by Terraform.
+The AWS region used by the default configuration is:
+
+```text
+eu-west-1
+```
 
 ---
 
-## 3. Clone the repository
+## 3. Clone the project
 
 Clone the project and enter the repository:
 
@@ -118,11 +110,11 @@ Edit:
 terraform/backend.hcl
 ```
 
-Set the name of the state bucket you created:
+Set the name of the state bucket you created and choose a unique state key for this installation:
 
 ```hcl
 bucket = "YOUR_TERRAFORM_STATE_BUCKET"
-key    = "terraform.tfstate"
+key    = "installations/YOUR_INSTALLATION_NAME/terraform.tfstate"
 region = "eu-west-1"
 
 encrypt      = true
@@ -137,9 +129,33 @@ The repository already ignores this file.
 
 ### Important
 
-If you deploy the starter kit more than once, use a separate Terraform state for each independent installation.
+The Terraform state must be unique for every independent installation.
+
+The `installation_id` used in the backend state key should match the `installation_id` used by Terraform when an explicit installation ID is configured.
 
 For example:
+
+```text
+Installation A
+
+installation_id = a1b2c3d4
+
+State bucket: customer-terraform-state
+State key:    installations/a1b2c3d4/terraform.tfstate
+```
+
+Another installation can use:
+
+```text
+Installation B
+
+installation_id = f8e7d6c5
+
+State bucket: customer-terraform-state
+State key:    installations/f8e7d6c5/terraform.tfstate
+```
+
+Alternatively, separate state buckets can be used:
 
 ```text
 Installation A
@@ -151,7 +167,11 @@ State bucket: customer-b-terraform-state
 State key:    terraform.tfstate
 ```
 
-This keeps Terraform state independent between installations.
+Both approaches keep Terraform state independent.
+
+**Never point two independent installations at the same Terraform state.**
+
+The Terraform state bucket is separate from the application's frontend S3 bucket.
 
 ---
 
@@ -169,9 +189,23 @@ The default configuration can be used for a standard installation.
 
 You do **not** need to manually rename the application's AWS resources.
 
-Terraform automatically generates an installation ID during deployment.
+Terraform automatically generates an installation ID when `installation_id` is not provided.
 
-The generated ID is incorporated into the resource naming convention:
+For a reproducible installation, you can provide your own persistent installation ID:
+
+```hcl
+installation_id = "a1b2c3d4"
+```
+
+The installation ID must contain only lowercase letters, numbers and hyphens, and must be between 4 and 32 characters.
+
+When using an explicit `installation_id`, use the same value in the Terraform backend state key:
+
+```text
+installations/a1b2c3d4/terraform.tfstate
+```
+
+The generated or provided installation ID is incorporated into the resource naming convention:
 
 ```text
 <project>-<environment>-<installation-id>-<resource>
@@ -187,9 +221,7 @@ aws-saas-starter-kit-dev-a1b2c3d4-backend
 aws-saas-starter-kit-dev-a1b2c3d4-api
 ```
 
-The actual installation ID is generated automatically.
-
-Another independent deployment will generate a different installation ID.
+Another independent deployment can use a different installation ID.
 
 **Do not manually rename DynamoDB tables, Lambda functions, Cognito resources, API Gateway resources, IAM resources or CloudFront-related resources in the Terraform files.**
 
@@ -224,68 +256,83 @@ terraform init -reconfigure -backend-config=backend.hcl
 
 ---
 
-## 8. Validate Terraform
+## 8. Validate the Terraform configuration
 
 Run:
 
 ```bash
-terraform fmt -check -recursive
 terraform validate
 ```
 
-The configuration should validate successfully.
+You can also check formatting:
 
-The AWS provider may display deprecation warnings depending on the provider version.
+```bash
+terraform fmt -check -recursive
+```
 
-Warnings do not necessarily prevent a successful validation.
+If Terraform reports missing providers or modules, run:
+
+```bash
+terraform init -upgrade
+```
+
+and then:
+
+```bash
+terraform validate
+```
 
 ---
 
 ## 9. Review the Terraform plan
 
-Run:
+Before creating infrastructure, run:
 
 ```bash
 terraform plan -input=false
 ```
 
-Review the resources before applying them.
+Review the resources that Terraform intends to create.
 
-The infrastructure includes resources for:
+For a new independent installation, Terraform should create resources belonging to the current installation.
 
-* S3
-* CloudFront
-* Cognito
-* API Gateway
-* Lambda
-* DynamoDB
-* IAM
-* CloudWatch
-* Terraform installation identity
+It should **not** attempt to destroy or modify resources belonging to another independent installation.
 
-A new installation should show resources being created rather than attempting to modify resources belonging to another installation.
+If using an explicit installation ID:
+
+```bash
+terraform plan \
+  -input=false \
+  -var='installation_id=a1b2c3d4'
+```
+
+The resulting resource names should contain the selected installation ID.
 
 ---
 
 ## 10. Deploy the infrastructure
 
-When the plan has been reviewed:
+Apply the Terraform configuration:
 
 ```bash
-terraform apply -input=false
+terraform apply
 ```
 
-Review the plan again and confirm the deployment when Terraform asks for confirmation.
+Review the proposed changes and confirm when Terraform asks for confirmation.
 
-Terraform will generate the installation ID automatically.
+For automated environments:
 
-No manual resource renaming is required.
+```bash
+terraform apply -input=false -auto-approve
+```
+
+Terraform creates the AWS infrastructure required by the application.
 
 ---
 
 ## 11. Verify the installation ID
 
-After deployment:
+After deployment, inspect the Terraform outputs:
 
 ```bash
 terraform output
@@ -293,10 +340,13 @@ terraform output
 
 The outputs include the resources created for the installation.
 
-You can also inspect the Terraform state:
+For example:
 
 ```bash
-terraform state list
+terraform output -raw backend_lambda_name
+terraform output -raw users_table_name
+terraform output -raw organizations_table_name
+terraform output -raw invitations_table_name
 ```
 
 The resource names returned by Terraform should correspond to the current installation.
@@ -305,27 +355,24 @@ The important point is that the installation receives its own resource naming na
 
 ---
 
-## 12. Get Terraform outputs
+## 12. Obtain application configuration
 
-After deployment:
+The frontend requires the API and Cognito configuration created by Terraform.
+
+From the Terraform directory:
 
 ```bash
-terraform output
+terraform output -raw backend_api_url
+terraform output -raw cognito_user_pool_id
+terraform output -raw cognito_client_id
 ```
 
-Important outputs include:
+Also obtain:
 
-```text
-backend_api_url
-backend_lambda_name
-cloudfront_distribution_id
-cloudfront_domain_name
-cognito_client_id
-cognito_user_pool_id
-frontend_bucket_name
-invitations_table_name
-organizations_table_name
-users_table_name
+```bash
+terraform output -raw frontend_bucket_name
+terraform output -raw cloudfront_distribution_id
+terraform output -raw cloudfront_domain_name
 ```
 
 These values belong to **your installation**.
@@ -336,13 +383,13 @@ Do not copy deployment values from another installation.
 
 ## 13. Configure the frontend
 
-Return to the project root:
+Return to the repository root:
 
 ```bash
 cd ..
 ```
 
-Create the local frontend environment file:
+Copy the environment template:
 
 ```bash
 cp web/.env.example web/.env.local
@@ -350,59 +397,44 @@ cp web/.env.example web/.env.local
 
 Edit:
 
-```bash
-nano web/.env.local
+```text
+web/.env.local
 ```
 
-Set the values returned by Terraform:
+Set:
 
-```env
+```text
 NEXT_PUBLIC_API_URL=
 NEXT_PUBLIC_AWS_REGION=eu-west-1
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=
 NEXT_PUBLIC_COGNITO_CLIENT_ID=
 ```
 
-You can retrieve the individual values with:
+Populate the values using the Terraform outputs from the current installation.
 
-```bash
-terraform -chdir=terraform output -raw backend_api_url
-terraform -chdir=terraform output -raw cognito_user_pool_id
-terraform -chdir=terraform output -raw cognito_client_id
-```
+Example:
 
-For example:
-
-```env
+```text
 NEXT_PUBLIC_API_URL=https://YOUR_API_ID.execute-api.eu-west-1.amazonaws.com
 NEXT_PUBLIC_AWS_REGION=eu-west-1
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=eu-west-1_xxxxx
 NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxx
 ```
 
-The example values above are placeholders.
-
-Use the values generated by **your Terraform installation**.
-
-**Never commit `web/.env.local`.**
+Do not commit `web/.env.local`.
 
 ---
 
 ## 14. Install frontend dependencies
 
-Enter the web directory:
+Run:
 
 ```bash
 cd web
-```
-
-Install dependencies:
-
-```bash
 npm ci
 ```
 
-Run linting:
+Then:
 
 ```bash
 npm run lint
@@ -414,25 +446,16 @@ Build the frontend:
 npm run build
 ```
 
-The static export will be generated in:
-
-```text
-web/out/
-```
+The production build should complete successfully.
 
 ---
 
-## 15. Test the backend
+## 15. Install backend dependencies
 
-From the project root:
-
-```bash
-cd backend
-```
-
-Install dependencies:
+Return to the backend directory:
 
 ```bash
+cd ../backend
 npm ci
 ```
 
@@ -448,32 +471,42 @@ Build the backend:
 npm run build
 ```
 
-The backend should pass all tests and compile successfully before deployment.
+The backend tests should pass before deployment.
 
 ---
 
-## 16. Deploy the frontend manually
+## 16. Deploy the frontend
 
-The frontend is deployed to the S3 bucket created by Terraform.
+Return to the repository root:
 
-From the project root, run:
+```bash
+cd ..
+```
+
+Build the frontend:
+
+```bash
+cd web
+npm run build
+cd ..
+```
+
+Upload the generated static files to the frontend S3 bucket:
 
 ```bash
 aws s3 sync \
   web/out \
-  s3://$(terraform -chdir=terraform output -raw frontend_bucket_name) \
+  "s3://$(terraform -chdir=terraform output -raw frontend_bucket_name)" \
   --delete
 ```
 
-This uses the frontend bucket generated for the current Terraform installation.
-
-No bucket name needs to be manually configured.
+The frontend bucket is generated for the current Terraform installation.
 
 ---
 
 ## 17. Invalidate CloudFront
 
-After uploading the frontend, invalidate the CloudFront cache:
+After uploading a new frontend version, invalidate CloudFront:
 
 ```bash
 aws cloudfront create-invalidation \
@@ -481,21 +514,33 @@ aws cloudfront create-invalidation \
   --paths "/*"
 ```
 
-The distribution ID is obtained automatically from the current Terraform installation.
-
----
-
-## 18. Open the application
-
-Get the CloudFront domain:
+Obtain the CloudFront domain:
 
 ```bash
 terraform -chdir=terraform output -raw cloudfront_domain_name
 ```
 
-Open the returned domain in your browser.
+Open the returned domain in a browser.
 
-The application should load from the CloudFront distribution created by Terraform.
+---
+
+## 18. Verify AWS resources
+
+Verify the main infrastructure created by Terraform:
+
+```bash
+terraform -chdir=terraform state list
+```
+
+The state should contain the resources for the current installation.
+
+You can also verify the AWS identity:
+
+```bash
+aws sts get-caller-identity
+```
+
+and inspect the deployed resources through the AWS Console.
 
 ---
 
@@ -522,12 +567,14 @@ The newly deployed installation should use its own application resources and dat
 
 The starter kit is designed to support independent deployments.
 
-Each installation generates a different installation ID.
+Each installation can use a different installation ID.
 
 For example:
 
 ```text
 Installation A
+
+installation_id = a1b2c3d4
 
 aws-saas-starter-kit-dev-a1b2c3d4-users
 aws-saas-starter-kit-dev-a1b2c3d4-organizations
@@ -536,10 +583,12 @@ aws-saas-starter-kit-dev-a1b2c3d4-backend
 aws-saas-starter-kit-dev-a1b2c3d4-api
 ```
 
-Another installation may generate:
+Another installation can use:
 
 ```text
 Installation B
+
+installation_id = f8e7d6c5
 
 aws-saas-starter-kit-dev-f8e7d6c5-users
 aws-saas-starter-kit-dev-f8e7d6c5-organizations
@@ -550,9 +599,30 @@ aws-saas-starter-kit-dev-f8e7d6c5-api
 
 The application resource names are therefore different even when the same template is used.
 
+Each installation must also use a separate Terraform state.
+
+For example:
+
+```text
+Installation A
+installation_id = a1b2c3d4
+state key       = installations/a1b2c3d4/terraform.tfstate
+
+Installation B
+installation_id = f8e7d6c5
+state key       = installations/f8e7d6c5/terraform.tfstate
+```
+
+The installation ID and Terraform state key work together:
+
+* The installation ID separates the names of application resources.
+* The Terraform state key separates Terraform's management state.
+
+Changing only the installation ID while reusing another installation's state is **not** an independent deployment.
+
 ### Important
 
-Each independent installation must also have its own Terraform state.
+Each independent installation must have its own Terraform state.
 
 Do not point two independent installations at the same Terraform state unless you intentionally want them to represent the same infrastructure.
 
@@ -679,6 +749,7 @@ Verify:
 * The AWS credentials are configured correctly.
 * The AWS identity has access to the bucket.
 * `terraform/backend.hcl` exists.
+* The state key is unique to the current installation.
 
 Check the file:
 
@@ -808,6 +879,8 @@ terraform -chdir=terraform state list
 
 The application resources should belong to the current Terraform installation.
 
+Also verify that the current installation is using a unique `installation_id` and a unique Terraform state key.
+
 Do not manually rename existing resources unless you intentionally want to modify the infrastructure design.
 
 ---
@@ -842,6 +915,10 @@ AWS CLI configuration
     ↓
 Create Terraform state bucket
     ↓
+Choose installation ID
+    ↓
+Configure unique backend state key
+    ↓
 Configure backend.hcl
     ↓
 terraform init
@@ -851,8 +928,6 @@ terraform validate
 terraform plan
     ↓
 terraform apply
-    ↓
-Automatic installation ID
     ↓
 Terraform outputs
     ↓
@@ -898,31 +973,39 @@ The starter kit provides the technical foundation for a SaaS application.
 
 Each production deployment should be reviewed according to its own architecture, security requirements, traffic profile and compliance requirements.
 
-### Security roadmap
-
-Additional production hardening can be added depending on the application and traffic profile, including:
-
-* AWS WAF
-* CloudFront security controls
-* Rate limiting
-* Enhanced logging and monitoring
-* CloudWatch alarms
-* AWS Shield protections where appropriate
-* Additional IAM least-privilege controls
-* Backup and recovery policies
-
-These protections should be evaluated based on the application's actual production requirements and expected traffic.
-
 ---
 
-## 29. Support and further documentation
+## Final checklist
 
-For the shorter deployment procedure, see:
+Before considering an installation complete, verify:
 
 ```text
-docs/QUICKSTART.md
+[ ] AWS credentials configured
+[ ] Terraform state bucket created
+[ ] Unique installation ID selected
+[ ] Unique Terraform state key configured
+[ ] terraform init completed
+[ ] terraform validate passed
+[ ] terraform plan reviewed
+[ ] terraform apply completed
+[ ] Terraform outputs collected
+[ ] Frontend environment configured
+[ ] Backend tests passed
+[ ] Backend build passed
+[ ] Frontend lint passed
+[ ] Frontend build passed
+[ ] Frontend uploaded to S3
+[ ] CloudFront invalidated
+[ ] Application verified
+[ ] GitHub Actions configured
 ```
 
-The Quick Start provides the fastest path from an AWS account to a running installation.
+For multiple installations, verify additionally:
 
-This installation guide provides the complete deployment process, configuration details and troubleshooting information.
+```text
+[ ] Each installation has a unique installation ID
+[ ] Each installation has a separate Terraform state
+[ ] Resource names are isolated
+[ ] Application data is isolated
+[ ] No installation uses another installation's state
+```

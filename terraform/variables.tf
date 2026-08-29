@@ -26,3 +26,20 @@ variable "enable_versioning" {
   type        = bool
   default     = true
 }
+
+variable "installation_id" {
+  description = "Optional persistent unique identifier for this installation"
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.installation_id == "" || can(regex("^[a-z0-9-]{4,32}$", var.installation_id))
+    error_message = "installation_id must contain only lowercase letters, numbers, and hyphens, between 4 and 32 characters."
+  }
+}
+
+variable "legacy_naming" {
+  description = "Preserve the original resource naming scheme for an existing installation"
+  type        = bool
+  default     = false
+}

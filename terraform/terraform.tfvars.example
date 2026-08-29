@@ -2,4 +2,12 @@ project_name         = "aws-saas-starter-kit"
 environment          = "dev"
 aws_region           = "eu-west-1"
 frontend_bucket_name = ""
-enable_versioning    = true
+
+enable_versioning = true
+
+# Optional: set a persistent ID for deterministic resource names.
+# installation_id = "a1b2c3d4"
+
+# AWS WAF protection for API Gateway.
+enable_waf     = true
+waf_rate_limit = 1000
